@@ -49,7 +49,7 @@ Raw Data (2 files)
     → Label Encoding (categorical variables)
     → Binary Target Creation (P1+P2 = 0, P3+P4 = 1)
     → Train/Test Split (80/20)
-    → Model Training (LR, RF, XGBoost, LightGBM, CatBoost)
+    → Model Training (LR, RF, XGBoost, LightGBM)
     → Threshold Tuning
     → SHAP Explainability
     → Business Impact Analysis
@@ -107,7 +107,6 @@ All four engineered features appeared in the top 15 SHAP features, confirming th
 | Logistic Regression | 81.5% | 76% | 49% | 0.8429 | 0% |
 | Random Forest | 85.8% | 82% | 63% | 0.9069 | 1% |
 | XGBoost | 87.1% | 80% | 74% | 0.9288 | 3% |
-| CatBoost | 87.6% | 82% | 71% | 0.9313 | 2% |
 | **LightGBM** | **87.6%** | **80%** | **75%** | **0.9318** | **3%** |
 
 **Final model: LightGBM** — highest ROC-AUC (0.9318) and Average Precision (0.8706) among all models.
@@ -245,7 +244,7 @@ Probability Score    Action
 ```
 Language    : Python 3.10
 Final Model : LightGBM (GPU accelerated)
-All Models  : LightGBM, XGBoost, CatBoost, Random Forest, Logistic Regression
+All Models  : LightGBM, XGBoost, Random Forest, Logistic Regression
 Libraries   : scikit-learn, pandas, numpy, matplotlib, seaborn, shap, lightgbm
 GPU         : NVIDIA Tesla T4 (Google Colab)
 Platform    : Google Colab
