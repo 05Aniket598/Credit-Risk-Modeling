@@ -1,9 +1,9 @@
 # Credit Risk Classification — Binary Default Prediction
 
 ![Python](https://img.shields.io/badge/Python-3.10-blue)
-![CatBoost](https://img.shields.io/badge/Model-CatBoost-green)
-![ROC-AUC](https://img.shields.io/badge/ROC--AUC-0.9313-brightgreen)
-![Recall](https://img.shields.io/badge/High--Risk%20Recall-81%25-orange)
+![LightGBM](https://img.shields.io/badge/Model-LightGBM-green)
+![ROC-AUC](https://img.shields.io/badge/ROC--AUC-0.9318-brightgreen)
+![Recall](https://img.shields.io/badge/High--Risk%20Recall-80%25-orange)
 ![Status](https://img.shields.io/badge/Status-Complete-success)
 
 ---
@@ -45,10 +45,11 @@ Raw Data (2 files)
     → Merging on PROSPECTID
     → EDA (Chi-square, ANOVA, VIF analysis)
     → Feature Selection (54 features retained)
+    → Feature Engineering (enq_pressure, deliq_income_ratio, PL_seeking, borrow_recency)
     → Label Encoding (categorical variables)
     → Binary Target Creation (P1+P2 = 0, P3+P4 = 1)
     → Train/Test Split (80/20)
-    → Model Training (LR, RF, XGBoost, CatBoost)
+    → Model Training (LR, RF, XGBoost, LightGBM, CatBoost)
     → Threshold Tuning
     → SHAP Explainability
     → Business Impact Analysis
@@ -84,28 +85,47 @@ P3 is a "middle zone" class with no clear feature boundary. Binary conversion re
 
 ---
 
-## Models Trained
+## Feature Engineering
 
-| Model | Test Accuracy | High-Risk Recall | High-Risk Precision | Train-Test Gap |
-|---|---|---|---|---|
-| Logistic Regression | 81.5% | 76% | 49% | 0% |
-| Random Forest | 85.8% | 82% | 63% | 1% |
-| XGBoost | 87.1% | 82% | 70% | 3% |
-| **CatBoost** | **87.7%** | **82%** | **72%** | **2%** |
+Four new features were created based on domain logic and SHAP analysis:
 
-**Final model: CatBoost** — best balance of recall, precision, and stability.
+| Feature | Formula | Business Meaning |
+|---|---|---|
+| `enq_pressure` | `enq_L3m / (time_since_recent_enq + 1)` | Recent loan seeking intensity |
+| `deliq_income_ratio` | `max_recent_level_of_deliq / (NETMONTHLYINCOME + 1)` | Delinquency relative to income |
+| `PL_seeking` | `pct_PL_enq_L6m_of_ever * PL_enq_L12m` | Personal loan seeking behaviour |
+| `borrow_recency` | `1 / (time_since_recent_enq + 1)` | How recently borrower applied |
+
+All four engineered features appeared in the top 15 SHAP features, confirming they added value to the model.
 
 ---
 
-## Threshold Tuning (CatBoost)
+## Models Trained
 
-| Threshold | Recall | Precision | F1 |
+| Model | Test Accuracy | High-Risk Recall | High-Risk Precision | ROC-AUC | Train-Test Gap |
+|---|---|---|---|---|---|
+| Logistic Regression | 81.5% | 76% | 49% | 0.8429 | 0% |
+| Random Forest | 85.8% | 82% | 63% | 0.9069 | 1% |
+| XGBoost | 87.1% | 80% | 74% | 0.9288 | 3% |
+| CatBoost | 87.6% | 82% | 71% | 0.9313 | 2% |
+| **LightGBM** | **87.6%** | **80%** | **75%** | **0.9318** | **3%** |
+
+**Final model: LightGBM** — highest ROC-AUC (0.9318) and Average Precision (0.8706) among all models.
+
+> CatBoost's main advantage is native categorical handling. Since all features were pre-encoded, that advantage was unused. LightGBM outperformed on ROC-AUC and Average Precision in this setting.
+
+---
+
+## Threshold Tuning (LightGBM)
+
+| Threshold | Recall | Precision | Accuracy |
 |---|---|---|---|
-| 0.30 | 0.85 | 0.71 | 0.77 |
-| **0.35** | **0.81** | **0.74** | **0.77** |
-| 0.40 | 0.78 | 0.77 | 0.77 |
-| 0.45 | 0.75 | 0.79 | 0.77 |
-| 0.50 | 0.72 | 0.82 | 0.77 |
+| 0.25 | 0.87 | 0.67 | 84% |
+| 0.30 | 0.83 | 0.72 | 86% |
+| **0.35** | **0.80** | **0.75** | **87%** |
+| 0.40 | 0.78 | 0.77 | 87% |
+| 0.45 | 0.74 | 0.80 | 87% |
+| 0.50 | 0.72 | 0.82 | 88% |
 
 **Chosen threshold: 0.35** — best balance for a lending context where missing a defaulter is costlier than a wrong rejection.
 
@@ -115,13 +135,13 @@ P3 is a "middle zone" class with no clear feature boundary. Binary conversion re
 
 | Metric | Value |
 |---|---|
-| Test Accuracy | 87.7% |
-| High-Risk Recall | 81% |
-| High-Risk Precision | 74% |
+| Test Accuracy | 87.6% |
+| High-Risk Recall | 80% |
+| High-Risk Precision | 75% |
 | F1 Score | 0.77 |
-| ROC-AUC | **0.9313** |
-| Average Precision (AP) | **0.8709** |
-| Train-Test Gap | ~2% |
+| ROC-AUC | **0.9318** |
+| Average Precision (AP) | **0.8706** |
+| Train-Test Gap | ~3% |
 
 ---
 
@@ -131,8 +151,8 @@ P3 is a "middle zone" class with no clear feature boundary. Binary conversion re
 |---|---|---|
 | Logistic Regression | 0.8429 | 0.6839 |
 | Random Forest | 0.9069 | 0.8280 |
-| XGBoost | 0.9286 | 0.8646 |
-| **CatBoost** | **0.9313** | **0.8709** |
+| XGBoost | 0.9288 | 0.8648 |
+| **LightGBM** | **0.9318** | **0.8706** |
 
 ---
 
@@ -140,15 +160,35 @@ P3 is a "middle zone" class with no clear feature boundary. Binary conversion re
 
 Top features driving High Risk prediction:
 
-| Rank | Feature | Business Meaning |
-|---|---|---|
-| 1 | `enq_L3m` | Enquiries in last 3 months — financial stress signal |
-| 2 | `Age_Oldest_TL` | Older credit history = more trustworthy |
-| 3 | `pct_PL_enq_L6m_of_ever` | % of personal loan enquiries recently |
-| 4 | `recent_level_of_deliq` | Recent delinquency severity |
-| 5 | `time_since_recent_enq` | How recently they applied for a loan |
+| Rank | Feature | SHAP Value | Business Meaning |
+|---|---|---|---|
+| 1 | `enq_L3m` | 1.20 | Enquiries in last 3 months — strongest financial stress signal |
+| 2 | `Age_Oldest_TL` | 0.65 | Older credit history = more trustworthy borrower |
+| 3 | `pct_PL_enq_L6m_of_ever` | 0.50 | % of personal loan enquiries recently |
+| 4 | `deliq_income_ratio` | 0.46 | Delinquency level relative to income |
+| 5 | `max_recent_level_of_deliq` | 0.42 | Maximum recent delinquency severity |
+| 6 | `num_std_12mts` | 0.41 | Standard accounts in last 12 months |
+| 7 | `enq_pressure` | 0.33 | Engineered: recent loan seeking intensity |
 
-**Key SHAP finding:** High `enq_L3m` (many recent loan applications) strongly pushes a borrower toward High Risk. Low `Age_Oldest_TL` (short credit history) also signals risk.
+**Key SHAP findings:**
+- High `enq_L3m` strongly pushes a borrower toward High Risk — borrower enquiring 3+ times in 3 months signals urgent financial need
+- Low `Age_Oldest_TL` signals new-to-credit borrower — bank has limited credit history to assess risk
+- High `pct_PL_enq_L6m_of_ever` means borrower is heavily seeking personal loans recently — stress signal
+- Engineered features `deliq_income_ratio` and `enq_pressure` both appear in top 7 — feature engineering added real value
+
+---
+
+## What the model is actually doing?
+
+After seeing SHAP plots here is the conclusion.
+
+`enq_L3m` is the major driver of the model with SHAP value of 1.20. Higher enquiry leads to risk according to Beeswarm plot — if a customer is enquiring for a loan a lot, it is risky to give him a loan.
+
+`Age_Oldest_TL` is the second major driver. If the age of oldest account is greater, the customer is safer — because bank has some credit history information about them.
+
+`pct_PL_enq_L6m_of_ever` is the third major driver with 0.50 SHAP value. Higher personal loan enquiry in recent months leads to higher default probability.
+
+**Single borrower explanation (index 1):** Borrower has +1.97 SHAP for `enq_L3m` — enquired 3 times in 3 months. `Age_Oldest_TL` is 6 months — very new to credit. 50% of all their enquiries are for personal loans. Model predicted 3.369 vs dataset average of -1.705. Classified as **High Risk**.
 
 ---
 
@@ -158,8 +198,8 @@ Top features driving High Risk prediction:
 
 | | Predicted Low Risk | Predicted High Risk |
 |---|---|---|
-| **Actual Low Risk** | 5,379 (TN) | 680 (FP) |
-| **Actual High Risk** | 446 (FN) | 1,908 (TP) |
+| **Actual Low Risk** | 5,404 (TN) | 655 (FP) |
+| **Actual High Risk** | 468 (FN) | 1,886 (TP) |
 
 ### Financial Impact
 
@@ -168,19 +208,22 @@ Top features driving High Risk prediction:
 | Avg loan amount assumed | Rs. 5,00,000 |
 | Loss Given Default | 40% |
 | Cost per wrong rejection | Rs. 2,000 |
-| **Loss avoided (test set)** | **Rs. 38.16 Cr** |
-| Cost of wrong rejections | Rs. 13.6 Lakh |
-| **Net benefit (test set)** | **Rs. 38.02 Cr** |
-| **Net benefit (42K portfolio)** | **Rs. 189.83 Cr** |
+| **Loss avoided (test set)** | **Rs. 37.72 Cr** |
+| Loss still at risk (missed) | Rs. 9.36 Cr |
+| Cost of wrong rejections | Rs. 13.1 Lakh |
+| **Net benefit (test set)** | **Rs. 37.59 Cr** |
+| **Net benefit (42K portfolio)** | **Rs. 187.65 Cr** |
 
 ### Risk Bucket Analysis
 
-| Risk Bucket | Borrowers | Actual Default Rate |
-|---|---|---|
-| Very Low (0–25%) | 5,336 | 5.8% → Auto Approve |
-| Low-Medium (25–50%) | 1,014 | 35.1% → Manual Review |
-| Medium-High (50–75%) | 733 | 62.1% → Conditional Reject |
-| Very High (75–100%) | 1,330 | 92.9% → Auto Reject |
+| Risk Bucket | Borrowers | Actual Default Rate | Action |
+|---|---|---|---|
+| Very Low (0–25%) | 5,409 | 5.8% | Auto Approve |
+| Low-Medium (25–50%) | 930 | 37.5% | Manual Review |
+| Medium-High (50–75%) | 627 | 59.8% | Conditional Reject |
+| Very High (75–100%) | 1,447 | 90.9% | Auto Reject |
+
+Model is able to classify 80 risky customers out of 100 actual risky customers. Borrowers with very high risk score (75–100%) have 90.9% actual default rate — almost every borrower in this bucket is genuinely risky. Borrowers in very low bucket (0–25%) have only 5.8% default rate — safe to approve directly.
 
 ---
 
@@ -201,8 +244,9 @@ Probability Score    Action
 
 ```
 Language    : Python 3.10
-Models      : CatBoost, XGBoost, LightGBM, Random Forest, Logistic Regression
-Libraries   : scikit-learn, pandas, numpy, matplotlib, seaborn, shap
+Final Model : LightGBM (GPU accelerated)
+All Models  : LightGBM, XGBoost, CatBoost, Random Forest, Logistic Regression
+Libraries   : scikit-learn, pandas, numpy, matplotlib, seaborn, shap, lightgbm
 GPU         : NVIDIA Tesla T4 (Google Colab)
 Platform    : Google Colab
 ```
@@ -217,9 +261,10 @@ credit-risk-classification/
 ├── Data_Cleaning_Model_Building.ipynb   ← Main notebook
 ├── case_study1.xlsx                     ← Raw data file 1
 ├── case_study2.xlsx                     ← Raw data file 2
-├── catboost_model.pkl                   ← Saved final model
+├── lgbm_model.pkl                       ← Saved final model
 ├── shap_feature_importance.png          ← SHAP bar plot
 ├── shap_summary.png                     ← SHAP beeswarm plot
+├── shap_waterfall.png                   ← Single borrower explanation
 ├── roc_curve.png                        ← ROC curve comparison
 ├── pr_curve.png                         ← Precision-Recall curve
 └── README.md
@@ -231,10 +276,10 @@ credit-risk-classification/
 
 ```bash
 # 1. Clone the repository
-git clone https://github.com/your-username/credit-risk-classification.git
+git clone https://github.com/05Aniket598/credit-risk-classification.git
 
 # 2. Install dependencies
-pip install catboost xgboost lightgbm scikit-learn shap pandas numpy matplotlib seaborn openpyxl
+pip install lightgbm xgboost catboost scikit-learn shap pandas numpy matplotlib seaborn openpyxl
 
 # 3. Open notebook
 jupyter notebook Data_Cleaning_Model_Building.ipynb
@@ -245,4 +290,5 @@ jupyter notebook Data_Cleaning_Model_Building.ipynb
 ## Author
 
 **Aniket Yadav**
-B.Sc. Data Science & AI | Mumbai [LinkedIn](https://linkedin.com/in/aniketyadavofficial/) | [GitHub](https://github.com/05Aniket598)
+B.Sc. Data Science & AI | Mumbai
+[LinkedIn](https://linkedin.com/in/aniketyadavofficial/) | [GitHub](https://github.com/05Aniket598)
