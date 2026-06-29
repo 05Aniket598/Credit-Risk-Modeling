@@ -1,4 +1,4 @@
-# Credit Risk Modelling — Binary Default Prediction
+# Credit Risk Modeling — Binary Default Prediction
 
 ![Python](https://img.shields.io/badge/Python-3.10-blue)
 ![LightGBM](https://img.shields.io/badge/Model-LightGBM-green)
